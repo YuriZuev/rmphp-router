@@ -16,5 +16,11 @@
 		"psr-4": {
 			"Rmphp\\Router\\": "src/"
 		}
-	}
+	},
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "https://gitlab.com/rmphp/rmphp-foundation.git"
+		}
+	]
 }
