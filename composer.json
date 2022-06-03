@@ -1,6 +1,5 @@
 {
 	"name": "rmphp/router",
-	"version": "1.0",
 	"license": "proprietary",
 	"authors": [
 		{
@@ -10,7 +9,7 @@
 	],
 	"require": {
 		"php": ">= 7.4.0",
-		"rmphp/foundation": "^1.0"
+		"rmphp/foundation": "dev-master"
 	},
 	"autoload": {
 		"psr-4": {
