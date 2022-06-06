@@ -99,7 +99,7 @@ class Router implements RouterInterface {
 				$params = [];
 				foreach ($paramSet as $key => $param){
 					if(empty($param)) continue;
-					$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? $params[$key] = (int) $param : $param;
+					$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? (int) $param : $param;
 				}
 				return new MatchObject($className, $methodName, $params);
 			}
