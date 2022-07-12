@@ -14,7 +14,7 @@ use Rmphp\Foundation\RouterInterface;
 
 class Router implements RouterInterface {
 
-	private array $routes = [];
+	private array $rules = [];
 	private string $startPoint = "/";
 
 	/**
@@ -27,25 +27,12 @@ class Router implements RouterInterface {
 	/**
 	 * @param array $rules
 	 */
-	public function withRules(array $rules): void {
-
-		// сортируем ключи в правилах
-		uasort($rules, function ($element1, $element2) {
-			// если в правилах указана позиция в ключе pos
-			$posElement1 = (!empty($element1['pos'])) ? $element1['pos'] : 0;
-			$posElement2 = (!empty($element2['pos'])) ? $element2['pos'] : 0;
-			if($posElement1 == $posElement2) {
-				// количество частей url
-				$lengthElement1 = count(explode("/", rtrim($element1['key'],"/")));
-				$lengthElement2 = count(explode("/", rtrim($element2['key'],"/")));
-				return ($lengthElement1 == $lengthElement2) ? 0 : (($lengthElement1 < $lengthElement2) ? 1 : -1);
-			}
-			return ($posElement1 > $posElement2) ? 1 : -1;
-		});
-
+	public function withRules(array $rules): void
+	{
+		$this->rules = [];
 		foreach ($rules as $rulesKey => $rulesNode) {
 			// проверка формата
-			if (!isset($rulesNode['key'], $rulesNode['route'])) continue;
+			if (!isset($rulesNode['key'], $rulesNode['routes'])) continue;
 			// удаляем спецсимволы
 			$realPattern = preg_replace("'[()\'\"]'", "", $rulesNode['key']);
 			// преобразуем псевдомаску в реальную маску
@@ -55,53 +42,58 @@ class Router implements RouterInterface {
 			// при наличии слеша в конце правила url должно строго ему соответствовать
 			$end = (preg_match("'/$'", $realPattern)) ? "$" : "";
 			// меняем запись на паттерн
-			$rules[$rulesKey]['key'] = $realPattern.$end;
+			$this->rules[$rulesKey] = $rulesNode;
+			$this->rules[$rulesKey]['key'] = "'^".$realPattern.$end."'";
 		}
-		$this->routes = $rules;
 	}
 
-	public function match(RequestInterface $request): ?MatchObject {
+	public function match(RequestInterface $request): ?array {
 
-		foreach ($this->routes as $routeKey => $routeNode) {
+		foreach ($this->rules as $rule) {
 			// если для правила определен метод и он не совпал смотри далее
-			if(!empty($routeNode['withMethod']) && is_array($routeNode['withMethod']) && false === (array_search($request->getMethod(), $routeNode['withMethod']))) continue;
-			if(!empty($routeNode['withoutMethod']) && is_array($routeNode['withoutMethod']) && false !== (array_search($request->getMethod(), $routeNode['withoutMethod']))) continue;
+			if(!empty($rule['withMethod']) && is_array($rule['withMethod']) && false === (array_search($request->getMethod(), $rule['withMethod']))) continue;
+			if(!empty($rule['withoutMethod']) && is_array($rule['withoutMethod']) && false !== (array_search($request->getMethod(), $rule['withoutMethod']))) continue;
 
 			// вычисляем рабочий url
 			$currentUrlString = preg_replace("'^".preg_quote($this->startPoint)."'", "/", $request->getUri()->getPath());
 
 			// в цикле проверяем совпадения текущей строки с правилами
-			if (preg_match("'^".$routeNode['key']."'", $currentUrlString, $matches)) {
-				// если в результате есть именные ключи от ?P<name>, пытаемся произвести замену <name> в части inc
-				foreach ($matches as $matchesKey => $matchesVal) {
-					if (!is_numeric($matchesKey)) {
-						$routeNode['route']['action'] = str_replace("<".ucfirst($matchesKey).">", ucfirst($matchesVal), $routeNode['route']['action']);
-						$routeNode['route']['action'] = str_replace("<".$matchesKey.">", $matchesVal, $routeNode['route']['action']);
+			if (preg_match($rule['key'], $currentUrlString, $matches)) {
+				$routes = [];
+				foreach ($rule['routes'] as $route) {
+					if(!is_array($route)) dd('1');
+					// если в результате есть именные ключи от ?P<name>, пытаемся произвести замену <name> в части inc
+					foreach ($matches as $matchesKey => $matchesVal) {
+						if (!is_numeric($matchesKey)) {
+							$route['action'] = str_replace("<".ucfirst($matchesKey).">", ucfirst($matchesVal), $route['action']);
+							$route['action'] = str_replace("<".$matchesKey.">", $matchesVal, $route['action']);
 
-						$routeNode['route']['method'] = str_replace("<".ucfirst($matchesKey).">", ucfirst($matchesVal), $routeNode['route']['method']);
-						$routeNode['route']['method'] = str_replace("<".$matchesKey.">", $matchesVal, $routeNode['route']['method']);
-						if (!empty($routeNode['route']['params'])) {
-							$routeNode['route']['params'] = str_replace("<".$matchesKey.">", $matchesVal, $routeNode['route']['params']);
+							$route['method'] = str_replace("<".ucfirst($matchesKey).">", ucfirst($matchesVal), $route['method']);
+							$route['method'] = str_replace("<".$matchesKey.">", $matchesVal, $route['method']);
+							if (!empty($route['params'])) {
+								$route['params'] = str_replace("<".$matchesKey.">", $matchesVal, $route['params']);
+							}
 						}
 					}
-				}
-				// чистка маркеров
-				$routeNode['route']['action'] = preg_replace("'<.+>'", "", $routeNode['route']['action']);
-				$routeNode['route']['method'] = preg_replace("'<.+>'", "", $routeNode['route']['method']);
-				if (!empty($routeNode['route']['params'])) {
-					$routeNode['route']['params'] = preg_replace("'<.+>'", "", $routeNode['route']['params']);
-				}
+					// чистка маркеров
+					$route['action'] = preg_replace("'<.+>'", "", $route['action']);
+					$route['method'] = preg_replace("'<.+>'", "", $route['method']);
+					if (!empty($route['params'])) {
+						$route['params'] = preg_replace("'<.+>'", "", $route['params']);
+					}
 
-				$className  = (!empty($routeNode['route']['action'])) ? $routeNode['route']['action'] : "";
-				$methodName = (!empty($routeNode['route']['method'])) ? $routeNode['route']['method'] : "";
-				$paramSet   = (!empty($routeNode['route']['params'])) ? explode(",",str_replace(" ", "", $routeNode['route']['params'])) : [];
+					$className  = (!empty($route['action'])) ? $route['action'] : "";
+					$methodName = (!empty($route['method'])) ? $route['method'] : "";
+					$paramSet   = (!empty($route['params'])) ? explode(",",str_replace(" ", "", $route['params'])) : [];
 
-				$params = [];
-				foreach ($paramSet as $key => $param){
-					if(empty($param)) continue;
-					$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? (int) $param : $param;
+					$params = [];
+					foreach ($paramSet as $key => $param){
+						if(empty($param)) continue;
+						$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? (int) $param : $param;
+					}
+					$routes[] = new MatchObject($className, $methodName, $params);
 				}
-				return new MatchObject($className, $methodName, $params);
+				return $routes;
 			}
 		}
 		return null;
