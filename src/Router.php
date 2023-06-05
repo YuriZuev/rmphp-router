@@ -27,12 +27,15 @@ class Router implements RouterInterface {
 		foreach ($rules as $rulesKey => $rulesNode) {
 			// проверка формата
 			if (!isset($rulesNode['key'], $rulesNode['routes'])) continue;
-			// удаляем спецсимволы
-			$realPattern = preg_replace("'[()\'\"]'", "", $rulesNode['key']);
 			// преобразуем псевдомаску в реальную маску
+			// заменяем алиасы на регвыражения
+			$realPattern = preg_replace("'<([A-z0-9]+?):@any>'", "(?P<$1>.*)", $rulesNode['key']);
+			$realPattern = preg_replace("'<([A-z0-9]+?):@num>'", "(?P<$1>[0-9]+)", $realPattern);
+			$realPattern = preg_replace("'<([A-z0-9]+?):@path>'", "(?P<$1>[^/]+)", $realPattern);
+			// поддерживаем свободное регулярное выражение в псевдомаске
 			$realPattern = preg_replace("'<([A-z0-9]+?):(.+?)>'", "(?P<$1>$2)", $realPattern);
 			// заменяем алиасы на регвыражения
-			$realPattern = str_replace(array("[num]", "[pth]", "[any]"), array("[0-9]+", "[^/]+", ".*"), $realPattern);
+			$realPattern = str_replace(["<@any>", "<@num>", "<@path>"], [".*", "[0-9]+", "[^/]+"], $realPattern);
 			// при наличии слеша в конце правила url должно строго ему соответствовать
 			$end = (preg_match("'/$'", $realPattern)) ? "$" : "";
 			// меняем запись на паттерн
@@ -55,19 +58,20 @@ class Router implements RouterInterface {
 			if (preg_match($rule['key'], $currentUrlString, $matches)) {
 				$routes = [];
 				foreach ($rule['routes'] as $route) {
+
 					// если в результате есть именные ключи от ?P<name>, пытаемся произвести замену <name> в части inc
 					foreach ($matches as $matchesKey => $matchesVal) {
 						if (!is_numeric($matchesKey)) {
-							$route['action'] = str_replace("<".ucfirst($matchesKey).">", ucfirst($matchesVal), $route['action']);
-							$route['action'] = str_replace("<".$matchesKey.">", $matchesVal, $route['action']);
 
-							$route['method'] = str_replace("<".ucfirst($matchesKey).">", ucfirst($matchesVal), $route['method']);
-							$route['method'] = str_replace("<".$matchesKey.">", $matchesVal, $route['method']);
+							$route['action'] = str_replace("<".$matchesKey.">", ucfirst($matchesVal), $route['action']);
+							$route['method'] = str_replace("<".$matchesKey.">", ucfirst($matchesVal), $route['method']);
+
 							if (!empty($route['params'])) {
 								$route['params'] = str_replace("<".$matchesKey.">", $matchesVal, $route['params']);
 							}
 						}
 					}
+
 					// чистка маркеров
 					$route['action'] = preg_replace("'<.+>'", "", $route['action']);
 					$route['method'] = preg_replace("'<.+>'", "", $route['method']);
@@ -84,6 +88,7 @@ class Router implements RouterInterface {
 						if(empty($param)) continue;
 						$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? (int) $param : $param;
 					}
+
 					$routes[] = new MatchObject($className, $methodName, $params);
 				}
 				return $routes;
