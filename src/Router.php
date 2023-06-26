@@ -29,11 +29,11 @@ class Router implements RouterInterface {
 			if (!isset($rulesNode['key'], $rulesNode['routes'])) continue;
 			// преобразуем псевдомаску в реальную маску
 			// заменяем алиасы на регвыражения
-			$realPattern = preg_replace("'<([A-z0-9]+?):@any>'", "(?P<$1>.*)", $rulesNode['key']);
-			$realPattern = preg_replace("'<([A-z0-9]+?):@num>'", "(?P<$1>[0-9]+)", $realPattern);
-			$realPattern = preg_replace("'<([A-z0-9]+?):@path>'", "(?P<$1>[^/]+)", $realPattern);
+			$realPattern = preg_replace("'<([A-z0-9_]+?):@any>'", "(?P<$1>.*)", $rulesNode['key']);
+			$realPattern = preg_replace("'<([A-z0-9_]+?):@num>'", "(?P<$1>[0-9]+)", $realPattern);
+			$realPattern = preg_replace("'<([A-z0-9_]+?):@path>'", "(?P<$1>[^/]+)", $realPattern);
 			// поддерживаем свободное регулярное выражение в псевдомаске
-			$realPattern = preg_replace("'<([A-z0-9]+?):(.+?)>'", "(?P<$1>$2)", $realPattern);
+			$realPattern = preg_replace("'<([A-z0-9_]+?):(.+?)>'", "(?P<$1>$2)", $realPattern);
 			// заменяем алиасы на регвыражения
 			$realPattern = str_replace(["<@any>", "<@num>", "<@path>"], [".*", "[0-9]+", "[^/]+"], $realPattern);
 			// при наличии слеша в конце правила url должно строго ему соответствовать
