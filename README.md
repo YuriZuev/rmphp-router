@@ -10,7 +10,7 @@ Stable version
 composer require rmphp/router
 ```
 ```bash
-composer require rmphp/router:"^1.1"
+composer require rmphp/router:"^1.0"
 ```
 
 
