@@ -17,5 +17,5 @@ composer require rmphp/router:"^1.1"
 Dev version contains the latest changes
 
 ```bash
-composer require rmphp/router:"1.1.x-dev"
+composer require rmphp/router:"1.x-dev"
 ```
