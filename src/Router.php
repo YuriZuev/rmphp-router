@@ -12,10 +12,10 @@ class Router implements RouterInterface {
 	private string $startPoint = "/";
 
 	/**
-	 * @param string $startPoint
+	 * @param string $mountPoint
 	 */
-	public function setStartPoint(string $startPoint): void {
-		$this->startPoint = $startPoint;
+	public function setStartPoint(string $mountPoint): void {
+		$this->startPoint = $mountPoint;
 	}
 
 	/**
