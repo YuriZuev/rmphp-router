@@ -25,11 +25,11 @@ class Router implements RouterInterface {
 	{
 		$this->rules = [];
 		foreach ($rules as $rulesKey => $rulesNode) {
-			// проверка формата
 			if (!isset($rulesNode['key'], $rulesNode['routes'])) continue;
 			// преобразуем псевдомаску в реальную маску
 			// заменяем алиасы на регвыражения
-			$realPattern = preg_replace("'<([A-z0-9_]+?):@any>'", "(?P<$1>.*)", $rulesNode['key']);
+			$realPattern = $rulesNode['key'];
+			$realPattern = preg_replace("'<([A-z0-9_]+?):@any>'", "(?P<$1>.*)", $realPattern);
 			$realPattern = preg_replace("'<([A-z0-9_]+?):@num>'", "(?P<$1>[0-9]+)", $realPattern);
 			$realPattern = preg_replace("'<([A-z0-9_]+?):@path>'", "(?P<$1>[^/]+)", $realPattern);
 			// поддерживаем свободное регулярное выражение в псевдомаске
@@ -37,13 +37,33 @@ class Router implements RouterInterface {
 			// заменяем алиасы на регвыражения
 			$realPattern = str_replace(["<@any>", "<@num>", "<@path>"], [".*", "[0-9]+", "[^/]+"], $realPattern);
 			// при наличии слеша в конце правила url должно строго ему соответствовать
-			$end = (preg_match("'/$'", $realPattern)) ? "$" : "";
+			$end = (str_ends_with($realPattern, "/")) ? "$" : "";
+
 			// меняем запись на паттерн
 			$this->rules[$rulesKey] = $rulesNode;
 			$this->rules[$rulesKey]['key'] = "'^".$realPattern.$end."'";
 		}
 	}
 
+	/**
+	 * @param array $rules
+	 * @return void
+	 */
+	public function withSet(array $rules): void
+	{
+		$this->rules = [];
+		foreach ($rules as $rulesKey => $rulesNode) {
+			if(!isset($rulesNode['key'], $rulesNode['routes'])) continue;
+			$rulesNode['key'] = trim($rulesNode['key'], '/');
+			if(!preg_match("'^[A-z0-9_/]+$'", $rulesNode['key'])) continue;
+			$this->rules[$rulesKey] = $rulesNode;
+		}
+	}
+
+	/**
+	 * @param RequestInterface $request
+	 * @return array|null
+	 */
 	public function match(RequestInterface $request): ?array {
 
 		foreach ($this->rules as $rule) {
@@ -89,6 +109,36 @@ class Router implements RouterInterface {
 						$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? (int) $param : $param;
 					}
 
+					$routes[] = new MatchObject($className, $methodName, $params);
+				}
+				return $routes;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * @param RequestInterface $request
+	 * @return array|null
+	 */
+	public function matchByArgv(RequestInterface $request): ?array {
+
+		foreach ($this->rules as $rule) {
+
+			// вычисляем строку для поиска
+			$currentString = trim(preg_replace("'^".preg_quote($this->startPoint)."/'", "", $request->getServerParams()['argv'][1]),'/');
+
+			// в цикле проверяем совпадения текущей строки с правилами
+			if ($rule['key'] == $currentString) {
+				$routes = [];
+				foreach ($rule['routes'] as $route) {
+					$className  = (!empty($route['action'])) ? $route['action'] : "";
+					$methodName = (!empty($route['method'])) ? $route['method'] : "";
+					$params = [];
+					foreach ($request->getServerParams()['argv'] as $key => $param){
+						if($key < 2) continue;
+						$params[$key] = (preg_match("'^[0-9]+$'", $param)) ? (int) $param : $param;
+					}
 					$routes[] = new MatchObject($className, $methodName, $params);
 				}
 				return $routes;
