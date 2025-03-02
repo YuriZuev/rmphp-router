@@ -11,16 +11,12 @@ class Router implements RouterInterface {
 	private array $rules = [];
 	private string $startPoint = "/";
 
-	/**
-	 * @param string $mountPoint
-	 */
+	/** @inheritDoc */
 	public function setStartPoint(string $mountPoint): void {
 		$this->startPoint = $mountPoint;
 	}
 
-	/**
-	 * @param array $rules
-	 */
+	/** @inheritDoc */
 	public function withRules(array $rules): void
 	{
 		$this->rules = [];
@@ -45,10 +41,7 @@ class Router implements RouterInterface {
 		}
 	}
 
-	/**
-	 * @param array $rules
-	 * @return void
-	 */
+	/** @inheritDoc */
 	public function withSet(array $rules): void
 	{
 		$this->rules = [];
@@ -60,10 +53,7 @@ class Router implements RouterInterface {
 		}
 	}
 
-	/**
-	 * @param RequestInterface $request
-	 * @return array|null
-	 */
+	/** @inheritDoc */
 	public function match(RequestInterface $request): ?array {
 
 		foreach ($this->rules as $rule) {
@@ -117,10 +107,7 @@ class Router implements RouterInterface {
 		return null;
 	}
 
-	/**
-	 * @param RequestInterface $request
-	 * @return array|null
-	 */
+	/** @inheritDoc */
 	public function matchByArgv(RequestInterface $request): ?array {
 
 		foreach ($this->rules as $rule) {
