@@ -33,7 +33,7 @@ class Router implements RouterInterface {
 			// заменяем алиасы на регвыражения
 			$realPattern = str_replace(["<@any>", "<@num>", "<@path>"], [".*", "[0-9]+", "[^/]+"], $realPattern);
 			// при наличии слеша в конце правила url должно строго ему соответствовать
-			$end = (str_ends_with($realPattern, "/")) ? "$" : "";
+			$end = (str_ends_with($realPattern, "/")) ? "$" : "/?$";
 
 			// меняем запись на паттерн
 			$this->rules[$rulesKey] = $rulesNode;
